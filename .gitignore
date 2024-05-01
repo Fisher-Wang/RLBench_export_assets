@@ -1,0 +1,11 @@
+.vscode/
+data/
+data_rlbench/
+
+__pycache__/
+
+*.txt
+*.ipynb
+*.log
+*.xml
+*.urdf
