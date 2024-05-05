@@ -2,7 +2,7 @@
 # All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
-# Editor: Haoran
+# Editor: Haoran Geng, Feishi Wang
 
 """
 Utility to convert a URDF into USD format.
@@ -41,8 +41,6 @@ from omni.isaac.kit import SimulationApp
 
 def parse_args():
     parser = argparse.ArgumentParser("Utility to convert a URDF into USD format.")
-    # parser.add_argument("input", type=str, help="The path to the input URDF file.")
-    # parser.add_argument("output", type=str, help="The path to store the USD file.")
     parser.add_argument("--headless", action="store_true", default=True, help="Force display off at all times.")
     parser.add_argument(
         "--merge_joints",
@@ -79,9 +77,11 @@ from os.path import exists as pexists
 from collections import defaultdict
 import xml.etree.ElementTree as ET
 import carb
+import omni
 import omni.isaac.core.utils.stage as stage_utils
 import omni.kit.commands
 from omni.isaac.core.simulation_context import SimulationContext
+from pxr import Usd, UsdPhysics, UsdGeom
 from utils import read_yaml, mkdir
 
 _DRIVE_TYPE = {
@@ -180,10 +180,21 @@ def single(urdf_path, usd_path):
     with open(urdf_unique_path, 'w') as f:
         f.write(xml_str)
 
-    # Import URDF file
+    # Convert URDF to USD
     omni.kit.commands.execute(
         "URDFParseAndImportFile", urdf_path=urdf_unique_path, import_config=urdf_config, dest_path=usd_path
     )
+    
+    # Open USD file and reset articulation root
+    stage = Usd.Stage.Open(usd_path)
+    for prim in stage.Traverse():
+        if prim.HasAPI(UsdPhysics.ArticulationRootAPI):
+            print('[INFO] Removing articulation root for', prim)
+            prim.RemoveAPI(UsdPhysics.ArticulationRootAPI)
+    defaultPrim = stage.GetDefaultPrim()
+    print('[INFO] Applying articulation root for', defaultPrim)
+    UsdPhysics.ArticulationRootAPI.Apply(defaultPrim)
+    stage.Save()
 
 def main():
     urdf_base_dir = 'data/urdf'
