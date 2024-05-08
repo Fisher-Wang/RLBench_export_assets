@@ -218,7 +218,17 @@ function recursiveExport(handle, exportDir, exportURDF)
         local status, error = pcall(simURDF.export, handle, urdfFilePath)
         if status then
             exportURDFSuccess = true
-            print(string.format("[INFO] Successfully export %s", name))
+            print(string.format("[INFO] Successfully export %s, resetting position and orientation", name))
+            sim.setObjectPosition(handle, {0, 0, 0}, sim.handle_world)
+            sim.setObjectOrientation(handle, {0, 0, 0}, sim.handle_world)
+            local status, error = pcall(simURDF.export, handle, urdfFilePath)
+            if status then
+                print(string.format("[INFO] Successfully export %s in canonical space", name))
+                print(string.format("[INFO] %s position", name), sim.getObjectPosition(handle))
+                print(string.format("[INFO] %s orientation", name), sim.getObjectOrientation(handle))
+            else
+                print(string.format("[ERROR] Failed to export %s as URDF. Error: %s", name, error))
+            end
         else
             print(string.format("[DEBUG] Failed to export %s as URDF. Error: %s", name, error))
             -- print(string.format("[INFO] Failed to export %s as URDF. Trying to export it as mesh", name))
@@ -288,14 +298,11 @@ function sysCall_init()
     --! DEBUG
     -- ttmFiles = {'close_box.ttm'}
     ttmFiles = {'empty_dishwasher.ttm'}
-    -- ttmFiles = {'setup_chess.ttm'}
-    -- ttmFiles = {'meat_on_grill.ttm', 'insert_onto_square_peg.ttm', 'put_money_in_safe.ttm', 'wipe_desk.ttm'}
-    -- ttmFiles = {'meat_on_grill.ttm'}
-    -- ttmFiles = {'insert_onto_square_peg.ttm'}
-    -- ttmFiles = {'put_money_in_safe.ttm'}
-    -- ttmFiles = {'wipe_desk.ttm'}
-    -- ttmFiles = {'put_money_in_safe.ttm'}
+    -- ttmFiles = {'open_drawer.ttm'}
     -- ttmFiles = {'slide_block_to_target.ttm'}
+    -- ttmFiles = {'reach_and_drag.ttm'}
+    -- ttmFiles = {'setup_chess.ttm'}
+    -- ttmFiles = {'stack_cups.ttm'}
     
     -- Iterate over each TTM file and export URDF
     -- ttmFiles = find_files(ttmDir, '.ttm')
