@@ -38,3 +38,10 @@ sim.proximitysensor_disc_subtype: 32
 sim.proximitysensor_cone_subtype: 33
 sim.proximitysensor_ray_subtype: 34
 ```
+
+#### Joint Subtypes
+```
+sim.joint_revolute_subtype: 10
+sim.joint_prismatic_subtype: 11
+sim.joint_spherical_subtype: 12
+```

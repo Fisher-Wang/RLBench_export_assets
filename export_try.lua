@@ -12,7 +12,7 @@ function find_files(dir, pattern)
 end
 
 function writeYAML(filePath, data)
-    local yamlString = lyaml.dump(data)
+    local yamlString = lyaml.dump({data})
     local file, err = io.open(filePath, 'w')
     if not file then
         error(string.format("[Error] Failed to open file %s. Error: %s", filePath, err))
@@ -206,6 +206,36 @@ function exportPath(handle, filePath)
     writeYAML(filePath, {{data=pathData}})
 end
 
+function exportJoint(handle, filePath)
+    local friction = sim.getEngineFloatParam(sim.bullet_body_friction, handle)
+    local jointPosition = sim.getJointPosition(handle)
+    local jointTargetPosition = sim.getJointTargetPosition(handle)
+    local jointTargetVelocity = sim.getJointTargetVelocity(handle)
+    local jointVelocity = sim.getJointVelocity(handle)
+    local jointInterval = sim.getJointInterval(handle)
+    local jointType = sim.getJointType(handle)
+    local jointMode = sim.getJointMode(handle)
+    local jointDependency = sim.getJointDependency(handle)
+    local jointForce = sim.getJointForce(handle)
+    local jointTargetForce = sim.getJointTargetForce(handle)
+    print('jointForce', jointForce)
+    print('friction', friction)
+    data = {
+        friction = friction,
+        jointPosition = jointPosition,
+        jointTargetPosition = jointTargetPosition,
+        jointTargetVelocity = jointTargetVelocity,
+        jointVelocity = jointVelocity,
+        jointInterval = jointInterval,
+        jointType = jointType,
+        jointMode = jointMode,
+        jointDependency = jointDependency,
+        jointForce = jointForce,
+        jointTargetForce = jointTargetForce
+    }
+    writeYAML(filePath, data)
+end
+
 function recursiveExport(handle, exportDir, exportURDF)
     local name = sim.getObjectName(handle)
     local modelType = sim.getObjectType(handle)
@@ -234,6 +264,12 @@ function recursiveExport(handle, exportDir, exportURDF)
             -- print(string.format("[INFO] Failed to export %s as URDF. Trying to export it as mesh", name))
             -- exportMesh(handle, urdfDir)
         end
+    -- If is joint
+    elseif modelType == sim.object_joint_type then
+        print(string.format('[INFO] Export joint %s', name))
+        local yamlFilePath = string.format("%s/%s.yaml", exportDir, name)
+        exportJoint(handle, yamlFilePath)
+
     -- If is waypoint
     elseif modelType == sim.object_dummy_type and string.find(name, 'waypoint') then
         print(string.format('[INFO] Exporting waypoint %s. Type: %d', name, modelType))
