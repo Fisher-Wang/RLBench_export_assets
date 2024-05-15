@@ -114,7 +114,7 @@ end
 function exportMesh(handle, meshDir)
     -- https://manual.coppeliarobotics.com/en/regularApi/simExportMesh.htm
     name = sim.getObjectName(handle)
-    meshFilePath = string.format("%s/%s.dae", meshDir, name)
+    meshFilePath = string.format("%s/%s.stl", meshDir, name)
 
     local allVertices = {}
     local allIndices = {}
@@ -139,7 +139,7 @@ function exportMesh(handle, meshDir)
     -- 5: COLLADA format
     -- 6: TEXT PLY format
     -- 7: BINARY PLY format
-    sim.exportMesh(5, meshFilePath, 0, 1, allVertices, allIndices)
+    sim.exportMesh(4, meshFilePath, 0, 1, allVertices, allIndices)
 end
 
 -----------------------
@@ -218,8 +218,6 @@ function exportJoint(handle, filePath)
     local jointDependency = sim.getJointDependency(handle)
     local jointForce = sim.getJointForce(handle)
     local jointTargetForce = sim.getJointTargetForce(handle)
-    print('jointForce', jointForce)
-    print('friction', friction)
     data = {
         friction = friction,
         jointPosition = jointPosition,
@@ -240,14 +238,14 @@ function recursiveExport(handle, exportDir, exportURDF)
     local name = sim.getObjectName(handle)
     local modelType = sim.getObjectType(handle)
     
-    local exportURDFSuccess = false
+    local exportURDForMeshSuccess = false
     -- If is shape, export URDF or Mesh
     if modelType == sim.object_shape_type and exportURDF then
         print(string.format('[INFO] Trying to export model %s. Type: %d', name, modelType))
         local urdfFilePath = string.format("%s/%s.urdf", exportDir, name)
         local status, error = pcall(simURDF.export, handle, urdfFilePath)
         if status then
-            exportURDFSuccess = true
+            exportURDForMeshSuccess = true
             print(string.format("[INFO] Successfully export %s, resetting position and orientation", name))
             sim.setObjectPosition(handle, {0, 0, 0}, sim.handle_world)
             sim.setObjectOrientation(handle, {0, 0, 0}, sim.handle_world)
@@ -260,9 +258,17 @@ function recursiveExport(handle, exportDir, exportURDF)
                 print(string.format("[ERROR] Failed to export %s as URDF. Error: %s", name, error))
             end
         else
-            print(string.format("[DEBUG] Failed to export %s as URDF. Error: %s", name, error))
-            -- print(string.format("[INFO] Failed to export %s as URDF. Trying to export it as mesh", name))
-            -- exportMesh(handle, urdfDir)
+            print(string.format("[INFO] Failed to export %s as URDF. Error: %s", name, error))
+            print(string.format("[INFO] Trying to export %s as mesh", name))
+            sim.setObjectPosition(handle, {0, 0, 0}, sim.handle_world)
+            sim.setObjectOrientation(handle, {0, 0, 0}, sim.handle_world)
+            local status, error = pcall(exportMesh, handle, exportDir)
+            if status then
+                exportURDForMeshSuccess = true
+                print(string.format("[INFO] Successfully export %s as mesh", name))
+            else
+                print(string.format("[ERROR] Failed to export %s as mesh. Error: %s", name, error))
+            end
         end
     -- If is joint
     elseif modelType == sim.object_joint_type then
@@ -286,7 +292,7 @@ function recursiveExport(handle, exportDir, exportURDF)
     end
 
     -- Recursively export children
-    exportChildURDF = exportURDF and not exportURDFSuccess
+    local exportChildURDF = exportURDF and not exportURDForMeshSuccess
     for i, childHandle in ipairs(getChildHandles(handle)) do
         recursiveExport(childHandle, exportDir, exportChildURDF)
     end
@@ -326,19 +332,20 @@ function sysCall_init()
     lyaml = require('lyaml')
 
     -- Set up file paths
-    dataCase = "data"
+    dataCase = "data_rlbench"
     ttmDir = string.format("/home/fs/cod/try/urdf_preview/%s/ttm", dataCase)
     exportBaseDir = string.format("/home/fs/cod/try/urdf_preview/%s/urdf", dataCase)
     lfs.mkdir(exportBaseDir)
 
     --! DEBUG
     -- ttmFiles = {'close_box.ttm'}
-    ttmFiles = {'empty_dishwasher.ttm'}
+    -- ttmFiles = {'empty_dishwasher.ttm'}
     -- ttmFiles = {'open_drawer.ttm'}
     -- ttmFiles = {'slide_block_to_target.ttm'}
     -- ttmFiles = {'reach_and_drag.ttm'}
     -- ttmFiles = {'setup_chess.ttm'}
     -- ttmFiles = {'stack_cups.ttm'}
+    ttmFiles = {'put_shoes_in_box.ttm'}
     
     -- Iterate over each TTM file and export URDF
     -- ttmFiles = find_files(ttmDir, '.ttm')

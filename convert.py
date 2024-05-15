@@ -123,7 +123,7 @@ def make_visual_names_unique(xml_string):
 
     return ET.tostring(root, encoding="unicode")
 
-def single(urdf_path, usd_path):
+def convert_urdf_to_usd(urdf_path, usd_path):
     # Import URDF config
     _, urdf_config = omni.kit.commands.execute("URDFCreateImportConfig")
 
@@ -197,8 +197,8 @@ def single(urdf_path, usd_path):
     stage.Save()
 
 def main():
-    urdf_base_dir = 'data/urdf'
-    usd_base_dir = 'data/usd'
+    urdf_base_dir = 'data_rlbench/urdf'
+    usd_base_dir = 'data_rlbench/usd'
     objs = args.objs if args.objs else read_yaml(args.conf)['Objects']
     
     all_urdf_paths = []
@@ -217,7 +217,7 @@ def main():
     
     for idx, (urdf_path, usd_path) in enumerate(zip(all_urdf_paths, all_usd_paths)):
         print("idx: ", idx, f"out of {len(all_usd_paths)}")
-        single(urdf_path, usd_path)
+        convert_urdf_to_usd(urdf_path, usd_path)
 
 if __name__ == "__main__":
     main()
