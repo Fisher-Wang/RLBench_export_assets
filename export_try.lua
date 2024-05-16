@@ -238,14 +238,14 @@ function recursiveExport(handle, exportDir, exportURDF)
     local name = sim.getObjectName(handle)
     local modelType = sim.getObjectType(handle)
     
-    local exportURDForMeshSuccess = false
+    local exportURDFSuccess = false
     -- If is shape, export URDF or Mesh
     if modelType == sim.object_shape_type and exportURDF then
         print(string.format('[INFO] Trying to export model %s. Type: %d', name, modelType))
         local urdfFilePath = string.format("%s/%s.urdf", exportDir, name)
         local status, error = pcall(simURDF.export, handle, urdfFilePath)
         if status then
-            exportURDForMeshSuccess = true
+            exportURDFSuccess = true
             print(string.format("[INFO] Successfully export %s, resetting position and orientation", name))
             sim.setObjectPosition(handle, {0, 0, 0}, sim.handle_world)
             sim.setObjectOrientation(handle, {0, 0, 0}, sim.handle_world)
@@ -264,7 +264,6 @@ function recursiveExport(handle, exportDir, exportURDF)
             sim.setObjectOrientation(handle, {0, 0, 0}, sim.handle_world)
             local status, error = pcall(exportMesh, handle, exportDir)
             if status then
-                exportURDForMeshSuccess = true
                 print(string.format("[INFO] Successfully export %s as mesh", name))
             else
                 print(string.format("[ERROR] Failed to export %s as mesh. Error: %s", name, error))
@@ -292,7 +291,7 @@ function recursiveExport(handle, exportDir, exportURDF)
     end
 
     -- Recursively export children
-    local exportChildURDF = exportURDF and not exportURDForMeshSuccess
+    local exportChildURDF = exportURDF and not exportURDFSuccess
     for i, childHandle in ipairs(getChildHandles(handle)) do
         recursiveExport(childHandle, exportDir, exportChildURDF)
     end
@@ -345,7 +344,7 @@ function sysCall_init()
     -- ttmFiles = {'reach_and_drag.ttm'}
     -- ttmFiles = {'setup_chess.ttm'}
     -- ttmFiles = {'stack_cups.ttm'}
-    ttmFiles = {'put_shoes_in_box.ttm'}
+    ttmFiles = {'basketball_in_hoop.ttm'}
     
     -- Iterate over each TTM file and export URDF
     -- ttmFiles = find_files(ttmDir, '.ttm')
