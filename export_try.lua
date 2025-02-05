@@ -234,6 +234,29 @@ function exportJoint(handle, filePath)
     writeYAML(filePath, data)
 end
 
+function recursiveGetSummary(handle, exportDir, data)
+    local name = sim.getObjectName(handle)
+    local modelType = sim.getObjectType(handle)
+    
+    if modelType == sim.object_shape_type then
+        table.insert(data['objects'], name)
+    elseif modelType == sim.object_joint_type then
+        table.insert(data['joints'], name)
+    end
+
+    for i, childHandles in ipairs(getChildHandles(handle)) do
+        recursiveGetSummary(childHandles, exportDir, data)
+    end
+end
+
+function getSummary(sceneHandle, exportDir)
+    local data = {}
+    data['objects'] = {}
+    data['joints'] = {}
+    recursiveGetSummary(sceneHandle, exportDir, data)
+    writeYAML(string.format("%s/summary.yaml", exportDir), data)
+end
+
 function recursiveExport(handle, exportDir, exportURDF)
     local name = sim.getObjectName(handle)
     local modelType = sim.getObjectType(handle)
@@ -259,6 +282,8 @@ function recursiveExport(handle, exportDir, exportURDF)
             end
         else
             print(string.format("[INFO] Failed to export %s as URDF. Error: %s", name, error))
+        end
+        if true then
             print(string.format("[INFO] Trying to export %s as mesh", name))
             sim.setObjectPosition(handle, {0, 0, 0}, sim.handle_world)
             sim.setObjectOrientation(handle, {0, 0, 0}, sim.handle_world)
@@ -274,7 +299,6 @@ function recursiveExport(handle, exportDir, exportURDF)
         print(string.format('[INFO] Export joint %s', name))
         local yamlFilePath = string.format("%s/%s.yaml", exportDir, name)
         exportJoint(handle, yamlFilePath)
-
     -- If is waypoint
     elseif modelType == sim.object_dummy_type and string.find(name, 'waypoint') then
         print(string.format('[INFO] Exporting waypoint %s. Type: %d', name, modelType))
@@ -291,7 +315,8 @@ function recursiveExport(handle, exportDir, exportURDF)
     end
 
     -- Recursively export children
-    local exportChildURDF = exportURDF and not exportURDFSuccess
+    -- local exportChildURDF = exportURDF and not exportURDFSuccess
+    local exportChildURDF = true
     for i, childHandle in ipairs(getChildHandles(handle)) do
         recursiveExport(childHandle, exportDir, exportChildURDF)
     end
@@ -302,6 +327,7 @@ function loadAndExportURDF(ttmFilePath, urdfDir)
     -- keepShapeAndJoint(sceneHandle)
     setRootObjectsToOrigin(sceneHandle)
     recursiveExport(sceneHandle, urdfDir, true)
+    -- getSummary(sceneHandle, urdfDir)
     return sceneHandle
 end
 
@@ -332,19 +358,118 @@ function sysCall_init()
 
     -- Set up file paths
     dataCase = "data_rlbench"
-    ttmDir = string.format("/home/fs/cod/try/urdf_preview/%s/ttm", dataCase)
-    exportBaseDir = string.format("/home/fs/cod/try/urdf_preview/%s/urdf", dataCase)
+    ttmDir = string.format("/home/feishi/cod/RLBench_export_assets/%s/ttm", dataCase)
+    exportBaseDir = string.format("/home/feishi/cod/RLBench_export_assets/%s/urdf", dataCase)
     lfs.mkdir(exportBaseDir)
 
     --! DEBUG
-    -- ttmFiles = {'close_box.ttm'}
-    -- ttmFiles = {'empty_dishwasher.ttm'}
-    -- ttmFiles = {'open_drawer.ttm'}
-    -- ttmFiles = {'slide_block_to_target.ttm'}
-    -- ttmFiles = {'reach_and_drag.ttm'}
-    -- ttmFiles = {'setup_chess.ttm'}
-    -- ttmFiles = {'stack_cups.ttm'}
-    ttmFiles = {'basketball_in_hoop.ttm'}
+    -- ttmFiles = {
+    --     "basketball_in_hoop.ttm",
+    --     "beat_the_buzz.ttm",
+    --     "block_pyramid.ttm",
+    --     "change_channel.ttm",
+    --     "change_clock.ttm",
+    --     "close_box.ttm",
+    --     "close_door.ttm",
+    --     "close_drawer.ttm",
+    --     "close_fridge.ttm",
+    --     "close_grill.ttm",
+    --     "close_jar.ttm",
+    --     "close_laptop_lid.ttm",
+    --     "close_microwave.ttm",
+    --     "empty_container.ttm",
+    --     "empty_dishwasher.ttm",
+    --     "get_ice_from_fridge.ttm",
+    --     "hang_frame_on_hanger.ttm",
+    --     "hit_ball_with_queue.ttm",
+    --     "hockey.ttm",
+    --     "insert_onto_square_peg.ttm",
+    --     "insert_usb_in_computer.ttm",
+    --     "lamp_off.ttm",
+    --     "lamp_on.ttm",
+    --     "lift_numbered_block.ttm",
+    --     "light_bulb_in.ttm",
+    --     "light_bulb_out.ttm",
+    --     "meat_off_grill.ttm",
+    --     "meat_on_grill.ttm",
+    --     "open_box.ttm",
+    --     "open_door.ttm",
+    --     "open_drawer.ttm",
+    --     "open_fridge.ttm",
+    --     "open_grill.ttm",
+    --     "open_jar.ttm",
+    --     "open_microwave.ttm",
+    --     "open_oven.ttm",
+    --     "open_washing_machine.ttm",
+    --     "open_window.ttm",
+    --     "open_wine_bottle.ttm",
+    --     "phone_on_base.ttm",
+    --     "pick_and_lift.ttm",
+    --     "pick_and_lift_small.ttm",
+    --     "pick_up_cup.ttm",
+    --     "place_cups.ttm",
+    --     "place_shape_in_shape_sorter.ttm",
+    --     "play_jenga.ttm",
+    --     "plug_charger_in_power_supply.ttm",
+    --     "pour_from_cup_to_cup.ttm",
+    --     "press_switch.ttm",
+    --     "push_button.ttm",
+    --     "push_buttons.ttm",
+    --     "put_all_groceries_in_cupboard.ttm",
+    --     "put_books_on_bookshelf.ttm",
+    --     "put_groceries_in_cupboard.ttm",
+    --     "put_item_in_drawer.ttm",
+    --     "put_knife_in_knife_block.ttm",
+    --     "put_knife_on_chopping_board.ttm",
+    --     "put_money_in_safe.ttm",
+    --     "put_plate_in_colored_dish_rack.ttm",
+    --     "put_rubbish_in_bin.ttm",
+    --     "put_shoes_in_box.ttm",
+    --     "put_toilet_roll_on_stand.ttm",
+    --     "put_tray_in_oven.ttm",
+    --     "put_umbrella_in_umbrella_stand.ttm",
+    --     "reach_and_drag.ttm",
+    --     "reach_target.ttm",
+    --     "remove_cups.ttm",
+    --     "scoop_with_spatula.ttm",
+    --     "screw_nail.ttm",
+    --     "set_the_table.ttm",
+    --     "setup_checkers.ttm",
+    --     "setup_chess.ttm",
+    --     "slide_block_to_target.ttm",
+    --     "slide_cabinet_open_and_place_cups.ttm",
+    --     "solve_puzzle.ttm",
+    --     "stack_blocks.ttm",
+    --     "stack_chairs.ttm",
+    --     "stack_cups.ttm",
+    --     "stack_wine.ttm",
+    --     "straighten_rope.ttm",
+    --     "sweep_to_dustpan.ttm",
+    --     "take_cup_out_from_cabinet.ttm",
+    --     "take_frame_off_hanger.ttm",
+    --     "take_item_out_of_drawer.ttm",
+    --     "take_lid_off_saucepan.ttm",
+    --     "take_money_out_safe.ttm",
+    --     "take_off_weighing_scales.ttm",
+    --     "take_plate_off_colored_dish_rack.ttm",
+    --     "take_shoes_out_of_box.ttm",
+    --     "take_toilet_roll_off_stand.ttm",
+    --     "take_tray_out_of_oven.ttm",
+    --     "take_umbrella_out_of_umbrella_stand.ttm",
+    --     "take_usb_out_of_computer.ttm",
+    --     "toilet_seat_down.ttm",
+    --     "toilet_seat_up.ttm",
+    --     "turn_oven_on.ttm",
+    --     "turn_tap.ttm",
+    --     "tv_on.ttm",
+    --     "unplug_charger.ttm",
+    --     "water_plants.ttm",
+    --     "weighing_scales.ttm",
+    --     "wipe_desk.ttm",
+    -- }
+    ttmFiles = {
+        "open_drawer.ttm",
+    }
     
     -- Iterate over each TTM file and export URDF
     -- ttmFiles = find_files(ttmDir, '.ttm')
@@ -361,7 +486,7 @@ function sysCall_init()
         --     print(string.format("[Error] Error occurred while processing %s. Error: %s", ttmFile, error))
         -- end
 
-        -- sim.removeModel(sceneHandle)
+        sim.removeModel(sceneHandle)
         print('')
     end
 end

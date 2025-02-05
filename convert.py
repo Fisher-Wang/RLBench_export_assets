@@ -85,7 +85,22 @@ import omni.kit.commands
 from omni.isaac.core.simulation_context import SimulationContext
 from pxr import Usd, UsdPhysics, UsdGeom, PhysxSchema
 from typing import Optional
-from utils import read_yaml, mkdir
+# from utils import read_yaml, mkdir
+import yaml
+
+def mkdir(path):
+    os.makedirs(path, exist_ok=True)
+    return path
+
+def read_yaml(path):
+    with open(path) as f:
+        data = yaml.load(f, Loader=yaml.Loader)
+    return data
+
+def write_yaml(path, data):
+    with open(path, 'w+') as f:
+        yaml.dump(data, f, default_flow_style=False)
+
 
 _DRIVE_TYPE = {
     "none": 0,
@@ -293,21 +308,23 @@ def main():
     
     all_urdf_paths = []
     all_usd_paths = []
+    all_object_names = []
     
     for o in objs:
         urdf_obj_dir = pjoin(urdf_base_dir, o)
         usd_obj_dir = mkdir(pjoin(usd_base_dir, o))
         urdf_names = [name for name in os.listdir(urdf_obj_dir) if 
                       name.endswith('.stl') or (name.endswith('.urdf') and not name.endswith('_unique.urdf'))]
-        urdf_names = [name for name in urdf_names if name.removesuffix('.urdf').removesuffix('.stl') in cfg[o]['types']]
+        urdf_names = [name for name in urdf_names if name.removesuffix('.urdf').removesuffix('.stl') in cfg[o]['objects']]
         usd_names = [name.removesuffix('.urdf').removesuffix('.stl') + '.usd' for name in urdf_names]
         urdf_paths = [pjoin(urdf_obj_dir, name) for name in urdf_names]
         usd_paths = [pjoin(usd_obj_dir, name) for name in usd_names]
         
         all_urdf_paths += urdf_paths
         all_usd_paths += usd_paths
+        all_object_names += [o] * len(urdf_paths)
     
-    for idx, (urdf_path, usd_path) in enumerate(zip(all_urdf_paths, all_usd_paths)):
+    for idx, (urdf_path, usd_path, o) in enumerate(zip(all_urdf_paths, all_usd_paths, all_object_names)):
         print("-" * 80)
         print("-" * 80)
         print("idx: ", idx, f"out of {len(all_usd_paths)}")
@@ -319,7 +336,10 @@ def main():
             raise ValueError("Unknown file type.")
         
         name = os.path.splitext(os.path.basename(usd_path))[0]
-        type = cfg[o]['types'][name]
+        try:
+            type = cfg[o]['types'][name]
+        except:
+            type = 'rigid'
         collider_type = safe_get(cfg, f'{o}.collider_types.{name}')
         post_process_usd(usd_path, type, collider_type)
         print("-" * 80)
