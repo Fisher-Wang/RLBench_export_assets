@@ -24,31 +24,6 @@ end
 -----------------------
 -- CoppeliaSim Utils
 -----------------------
-function hasChildJoint(handle)
-    local childHandles = sim.getObjectsInTree(handle)
-    for i = 1, #childHandles do
-        local childHandle = childHandles[i]
-        local childType = sim.getObjectType(childHandle)
-        local parentHandle = sim.getObjectParent(childHandle)
-        if childType == sim.object_joint_type and parentHandle == handle then
-            return true
-        end
-    end
-    return false
-end
-
-function getRootHandle(sceneHandle)
-    local childHandles = sim.getObjectsInTree(sceneHandle)
-    for i = 1, #childHandles do
-        local childHandle = childHandles[i]
-        local parentHandle = sim.getObjectParent(childHandle)
-        if parentHandle == -1 then
-            return childHandle
-        end
-    end
-    return -1
-end
-
 function getParentName(handle)
     local parentHandle = sim.getObjectParent(handle)
     if parentHandle == -1 then
@@ -56,22 +31,6 @@ function getParentName(handle)
     else
         return sim.getObjectName(parentHandle)
     end
-end
-
-function isDynamicallyEnabled(h)
-    -- https://forum.coppeliarobotics.com/viewtopic.php?t=10252
-    local r = false
-    if sim.getObjectType(h) == sim.object_joint_type then
-        r = sim.isDynamicallyEnabled(h)
-    end
-    if sim.getObjectType(h) == sim.object_shape_type then
-        if sim.getSimulationState() ~= sim.simulation_stopped then
-            if (sim.getObjectInt32Param(h,sim.shapeintparam_respondable) ~= 0) and (sim.getObjectInt32Param(h,sim.shapeintparam_static) == 0) then
-                r = true
-            end
-        end
-    end
-    return r
 end
 
 function getRootHandles(sceneHandle)
@@ -97,18 +56,6 @@ function getChildHandles(handle)
         end
     end
     return rst
-end
-
-function handle2name(handle)
-    return sim.getObjectName(handle)
-end
-
-function handles2names(handles)
-    names = {}
-    for i, handle in ipairs(handles) do
-        table.insert(names, handle2name(handle))
-    end
-    return names
 end
 
 function exportMesh(handle, meshDir)
@@ -144,9 +91,7 @@ function exportMesh(handle, meshDir)
     -- Export texture
     i_viz = 0
     while true do
-
         data = sim.getShapeViz(handle, i_viz)
-
         if data == nil then
             break
         end
@@ -223,17 +168,6 @@ function exportWaypoint(handle, filePath)
         pose = pose
     }
     writeYAML(filePath, data)
-end
-
-function exportPath(handle, filePath)
-    tags = sim.readCustomDataBlockTags(handle)
-    print(tags)
-    dataBlock = sim.readCustomDataBlock(handle, 'PATH')
-
-    print(dataBlock)
-    pathData = sim.unpackDoubleTable(dataBlock)
-    print(pathData)
-    writeYAML(filePath, {{data=pathData}})
 end
 
 function exportJoint(handle, filePath)
@@ -330,16 +264,10 @@ function recursiveExport(handle, exportDir, exportURDF)
         local yamlFilePath = string.format("%s/%s.yaml", exportDir, name)
         exportJoint(handle, yamlFilePath)
     -- If is waypoint
-    elseif modelType == sim.object_dummy_type and string.find(name, 'waypoint') then
-        print(string.format('[INFO] Exporting waypoint %s. Type: %d', name, modelType))
-        local yamlFilePath = string.format("%s/%s.yaml", exportDir, name)
-        exportWaypoint(handle, yamlFilePath)
-    -- If is path
-    elseif modelType == sim.object_path_type then
-        print(string.format('[INFO] Skipping path %s. Type: %d', name, modelType))
-        -- print(string.format('[INFO] Exporting path %s. Type: %d', name, modelType))
-        -- local yamlFilePath = string.format("%s/%s.yaml", exportDir, name)
-        -- exportPath(handle, yamlFilePath)
+    -- elseif modelType == sim.object_dummy_type and string.find(name, 'waypoint') then
+    --     print(string.format('[INFO] Exporting waypoint %s. Type: %d', name, modelType))
+    --     local yamlFilePath = string.format("%s/%s.yaml", exportDir, name)
+    --     exportWaypoint(handle, yamlFilePath)
     else
         print(string.format('[INFO] Skipping model %s. Type: %d', name, modelType))
     end
