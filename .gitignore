@@ -9,3 +9,6 @@ __pycache__/
 *.log
 *.xml
 *.urdf
+*.usd
+*.obj
+*.ply

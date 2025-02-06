@@ -114,12 +114,12 @@ end
 function exportMesh(handle, meshDir)
     -- https://manual.coppeliarobotics.com/en/regularApi/simExportMesh.htm
     name = sim.getObjectName(handle)
-    meshFilePath = string.format("%s/%s.stl", meshDir, name)
+    meshFilePath = string.format("%s/%s.obj", meshDir, name)
 
     local allVertices = {}
     local allIndices = {}
 
-    -- Prepare vertices
+    -- Export mesh
     local vertices, indices = sim.getShapeMesh(handle)
     local m = sim.getObjectMatrix(handle)
     for i = 1, #vertices // 3 do
@@ -139,7 +139,37 @@ function exportMesh(handle, meshDir)
     -- 5: COLLADA format
     -- 6: TEXT PLY format
     -- 7: BINARY PLY format
-    sim.exportMesh(4, meshFilePath, 0, 1, allVertices, allIndices)
+    sim.exportMesh(0, meshFilePath, 0, 1, allVertices, allIndices)
+
+    -- Export texture
+    i_viz = 0
+    while true do
+
+        data = sim.getShapeViz(handle, i_viz)
+
+        if data == nil then
+            break
+        end
+
+        local data_save = {
+            colors = data.colors,
+            indices = data.indices,
+            vertices = data.vertices,
+        }
+
+        if data.texture ~= nil then
+            texture_buffer = data.texture.texture
+            texture_resolution = data.texture.resolution
+            texture_savepath = string.format("%s/%s_%d.png", meshDir, name, i_viz)
+            print(string.format("[INFO] Saving %s texture to %s", name, texture_savepath))
+            sim.saveImage(texture_buffer, texture_resolution, 1, texture_savepath, 100)
+            data_save.texture_savepath = texture_savepath
+            data_save.texture_resolution = texture_resolution
+        end
+        writeYAML(string.format("%s/%s_%d.yaml", meshDir, name, i_viz), data_save)
+
+        i_viz = i_viz + 1
+    end
 end
 
 -----------------------
@@ -358,8 +388,8 @@ function sysCall_init()
 
     -- Set up file paths
     dataCase = "data_rlbench"
-    ttmDir = string.format("/home/feishi/cod/RLBench_export_assets/%s/ttm", dataCase)
-    exportBaseDir = string.format("/home/feishi/cod/RLBench_export_assets/%s/urdf", dataCase)
+    ttmDir = string.format("/home/haoran/cod/RLBench_export_assets/%s/ttm", dataCase)
+    exportBaseDir = string.format("/home/haoran/cod/RLBench_export_assets/%s/urdf", dataCase)
     lfs.mkdir(exportBaseDir)
 
     --! DEBUG
@@ -468,7 +498,7 @@ function sysCall_init()
     --     "wipe_desk.ttm",
     -- }
     ttmFiles = {
-        "open_drawer.ttm",
+        "basketball_in_hoop.ttm",
     }
     
     -- Iterate over each TTM file and export URDF
