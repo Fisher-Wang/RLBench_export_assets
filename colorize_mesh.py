@@ -5,10 +5,13 @@ import numpy as np
 import functools
 import os
 from loguru import logger as log
+import pymeshlab
+
 
 task_name = 'basketball_in_hoop'
 src_dir = f'data_rlbench/urdf/{task_name}'
-obj_names = [x.removesuffix('.obj') for x in os.listdir(src_dir) if x.endswith('.obj') and not x.endswith('_colored.obj')]
+obj_names = [x.removesuffix('.obj') for x in os.listdir(src_dir) if x.endswith('.obj') and not x.endswith('_colored.obj') and not x.endswith('_textured.obj')]
+
 
 def colorize_single_mesh(src_dir, obj_name):
     path = f'{src_dir}/{obj_name}.obj'
@@ -44,10 +47,30 @@ def colorize_single_mesh(src_dir, obj_name):
     combined_mesh = functools.reduce(lambda x, y: x + y, meshes)
     o3d.io.write_triangle_mesh(f'{src_dir}/{obj_name}_colored.obj', combined_mesh)
 
+
+def attach_texture(src_dir, obj_name):
+    ## TODO: This function should be merged into the colorize_single_mesh function, so that it can handle the case when there are multiple parts of mesh each with their own texture
+    path = f'{src_dir}/{obj_name}.obj'
+    mesh = o3d.io.read_triangle_mesh(path)
+    cfg_path = f'{src_dir}/{obj_name}_0.yaml'
+    cfg = yaml.load(open(cfg_path), Loader=yaml.FullLoader)
+    coordinates = np.array(cfg['texture_coordinates']).reshape(-1, 2)
+    texture_path = cfg['texture_savepath']
+    texture = o3d.io.read_image(texture_path)
+    mesh.textures = [texture]
+    mesh.triangle_uvs = o3d.utility.Vector2dVector(coordinates)
+    o3d.io.write_triangle_mesh(f'{src_dir}/{obj_name}_textured.obj', mesh)
+    ms = pymeshlab.MeshSet()
+    ms.load_new_mesh(f'{src_dir}/{obj_name}_textured.obj')
+    ms.save_current_mesh(f'{src_dir}/{obj_name}_textured.obj')
+
+
 def main():
     for obj_name in obj_names:
         log.info(f'Processing {obj_name}')
         colorize_single_mesh(src_dir, obj_name)
+        attach_texture(src_dir, obj_name)
+
 
 if __name__ == '__main__':
     main()

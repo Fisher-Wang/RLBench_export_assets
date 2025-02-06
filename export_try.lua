@@ -110,6 +110,7 @@ function exportMesh(handle, meshDir)
             sim.saveImage(texture_buffer, texture_resolution, 1, texture_savepath, 100)
             data_save.texture_savepath = texture_savepath
             data_save.texture_resolution = texture_resolution
+            data_save.texture_coordinates = data.texture.coordinates
         end
         writeYAML(string.format("%s/%s_%d.yaml", meshDir, name, i_viz), data_save)
 
