@@ -54,15 +54,17 @@ def attach_texture(src_dir, obj_name):
     mesh = o3d.io.read_triangle_mesh(path)
     cfg_path = f'{src_dir}/{obj_name}_0.yaml'
     cfg = yaml.load(open(cfg_path), Loader=yaml.FullLoader)
-    coordinates = np.array(cfg['texture_coordinates']).reshape(-1, 2)
-    texture_path = cfg['texture_savepath']
-    texture = o3d.io.read_image(texture_path)
-    mesh.textures = [texture]
-    mesh.triangle_uvs = o3d.utility.Vector2dVector(coordinates)
-    o3d.io.write_triangle_mesh(f'{src_dir}/{obj_name}_textured.obj', mesh)
-    ms = pymeshlab.MeshSet()
-    ms.load_new_mesh(f'{src_dir}/{obj_name}_textured.obj')
-    ms.save_current_mesh(f'{src_dir}/{obj_name}_textured.obj')
+    if 'texture_savepath' in cfg:
+        log.info(f'Attaching texture to {obj_name}')
+        coordinates = np.array(cfg['texture_coordinates']).reshape(-1, 2)
+        texture_path = cfg['texture_savepath']
+        texture = o3d.io.read_image(texture_path)
+        mesh.textures = [texture]
+        mesh.triangle_uvs = o3d.utility.Vector2dVector(coordinates)
+        o3d.io.write_triangle_mesh(f'{src_dir}/{obj_name}_textured.obj', mesh)
+        ms = pymeshlab.MeshSet()
+        ms.load_new_mesh(f'{src_dir}/{obj_name}_textured.obj')
+        ms.save_current_mesh(f'{src_dir}/{obj_name}_textured.obj')
 
 
 def main():
