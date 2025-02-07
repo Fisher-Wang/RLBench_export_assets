@@ -105,7 +105,7 @@ function exportMesh(handle, meshDir)
         if data.texture ~= nil then
             texture_buffer = data.texture.texture
             texture_resolution = data.texture.resolution
-            texture_savepath = string.format("%s/%s_%d.png", meshDir, name, i_viz)
+            texture_savepath = string.format("%s/texture_%d.png", meshDir, data.texture.id)
             print(string.format("[INFO] Saving %s texture to %s", name, texture_savepath))
             sim.saveImage(texture_buffer, texture_resolution, 1, texture_savepath, 100)
             data_save.texture_savepath = texture_savepath
