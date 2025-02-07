@@ -78,7 +78,7 @@ function exportMesh(handle, meshDir)
     end
 
     table.insert(allVertices, vertices)
-    table.insert(allIndices, indices)    
+    table.insert(allIndices, indices)
 
     -- 0: OBJ format
     -- 3: TEXT STL format
@@ -137,11 +137,11 @@ function recursiveKeepShapeAndJoint(handle)
         hasShapeOrJoint = hasShapeOrJoint or childHasShapeOrJoint
     end
     hasShapeOrJoint = hasShapeOrJoint or modelType == sim.object_shape_type or modelType == sim.object_joint_type
-    
+
     -- Delete model if it does not have any shape or joint children, and it is not a shape or joint
     if hasShapeOrJoint then
         return true
-    else 
+    else
         print(string.format("[INFO] Deleting model %s. Type: %d", name, modelType))
         sim.removeObjects({handle})
         return false
@@ -202,7 +202,7 @@ end
 function recursiveGetSummary(handle, exportDir, data)
     local name = sim.getObjectName(handle)
     local modelType = sim.getObjectType(handle)
-    
+
     if modelType == sim.object_shape_type then
         table.insert(data['objects'], name)
     elseif modelType == sim.object_joint_type then
@@ -225,7 +225,7 @@ end
 function recursiveExport(handle, exportDir, exportURDF)
     local name = sim.getObjectName(handle)
     local modelType = sim.getObjectType(handle)
-    
+
     local exportURDFSuccess = false
     -- If is shape, export URDF or Mesh
     if modelType == sim.object_shape_type and exportURDF then
@@ -427,9 +427,9 @@ function sysCall_init()
     --     "wipe_desk.ttm",
     -- }
     ttmFiles = {
-        "basketball_in_hoop.ttm",
+        "close_box.ttm",
     }
-    
+
     -- Iterate over each TTM file and export URDF
     -- ttmFiles = find_files(ttmDir, '.ttm')
     for i, ttmFile in ipairs(ttmFiles) do
@@ -438,7 +438,7 @@ function sysCall_init()
         local modelName = string.gsub(ttmFile, "%.ttm$", "")
         exportDir = string.format("%s/%s", exportBaseDir, modelName)
         lfs.mkdir(exportDir)
-        
+
         sceneHandle = loadAndExportURDF(ttmFilePath, exportDir)
         -- local status, error = pcall(loadAndExportURDF, ttmFilePath, urdfDir)
         -- if not status then

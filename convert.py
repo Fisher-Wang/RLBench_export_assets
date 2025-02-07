@@ -39,6 +39,7 @@ import asyncio
 # omni-isaac-orbit
 from omni.isaac.kit import SimulationApp
 
+
 def parse_args():
     parser = argparse.ArgumentParser("Utility to convert a URDF into USD format.")
     parser.add_argument("--headless", action="store_true", default=True, help="Force display off at all times.")
@@ -55,18 +56,18 @@ def parse_args():
     parser.add_argument(
         "--gym", "-g", action="store_true", default=True, help="Make the asset instanceable for efficient cloning."
     )
-    parser.add_argument(
-        '--conf', '-c', default='rlbench_objects.yaml')
-    parser.add_argument(
-        '--objs', '-o', nargs='+', help='List of objects to convert.')
+    parser.add_argument("--conf", "-c", default="rlbench_objects.yaml")
+    parser.add_argument("--objs", "-o", nargs="+", help="List of objects to convert.")
     args = parser.parse_args()
     return args
+
 
 # launch omniverse app
 args = parse_args()
 config = {"headless": args.headless}
 simulation_app = SimulationApp(config)
 from omni.isaac.core.utils.extensions import enable_extension
+
 enable_extension("omni.kit.asset_converter")
 
 ############################################
@@ -74,31 +75,36 @@ enable_extension("omni.kit.asset_converter")
 ############################################
 
 import os
-from os.path import join as pjoin
-from os.path import exists as pexists
-from collections import defaultdict
 import xml.etree.ElementTree as ET
+from collections import defaultdict
+from os.path import exists as pexists
+from os.path import join as pjoin
+from typing import Optional
+
 import carb
 import omni
 import omni.isaac.core.utils.stage as stage_utils
 import omni.kit.commands
-from omni.isaac.core.simulation_context import SimulationContext
-from pxr import Usd, UsdPhysics, UsdGeom, PhysxSchema
-from typing import Optional
+
 # from utils import read_yaml, mkdir
 import yaml
+from omni.isaac.core.simulation_context import SimulationContext
+from pxr import PhysxSchema, Usd, UsdGeom, UsdPhysics
+
 
 def mkdir(path):
     os.makedirs(path, exist_ok=True)
     return path
+
 
 def read_yaml(path):
     with open(path) as f:
         data = yaml.load(f, Loader=yaml.Loader)
     return data
 
+
 def write_yaml(path, data):
-    with open(path, 'w+') as f:
+    with open(path, "w+") as f:
         yaml.dump(data, f, default_flow_style=False)
 
 
@@ -117,14 +123,16 @@ _NORMALS_DIVISION = {
 }
 """Mapping from normals division name to URDF importer normals division number."""
 
+
 def safe_get(dict, key_dot_str):
-    keys = key_dot_str.split('.')
+    keys = key_dot_str.split(".")
     data = dict
     for k in keys:
         data = data.get(k, None)
         if data is None:
             return None
     return data
+
 
 def make_visual_names_unique(xml_string):
     tree = ET.ElementTree(ET.fromstring(xml_string))
@@ -150,12 +158,13 @@ def make_visual_names_unique(xml_string):
 
     return ET.tostring(root, encoding="unicode")
 
+
 def convert_urdf_to_usd(urdf_path, usd_path):
     # Import URDF config
     _, urdf_config = omni.kit.commands.execute("URDFCreateImportConfig")
 
     folder_path = os.path.dirname(urdf_path)
-    folder_name = folder_path.split('/')[-1]
+    folder_name = folder_path.split("/")[-1]
     # Set URDF config
     # -- stage settings -- dont need to change these.
     urdf_config.set_distance_scale(1.0)
@@ -195,29 +204,30 @@ def convert_urdf_to_usd(urdf_path, usd_path):
             except TypeError:
                 # this is only the case for subdivison scheme
                 pass
-    
+
     # Make visual names unique
-    xml_str = open(urdf_path, 'r').read()
-    xml_str = '<?xml version="1.0"?>' + '\n' + make_visual_names_unique(xml_str)
-    urdf_unique_path = urdf_path.replace('.urdf', '_unique.urdf')
-    with open(urdf_unique_path, 'w') as f:
+    xml_str = open(urdf_path, "r").read()
+    xml_str = '<?xml version="1.0"?>' + "\n" + make_visual_names_unique(xml_str)
+    urdf_unique_path = urdf_path.replace(".urdf", "_unique.urdf")
+    with open(urdf_unique_path, "w") as f:
         f.write(xml_str)
 
     # Convert URDF to USD
     omni.kit.commands.execute(
         "URDFParseAndImportFile", urdf_path=urdf_unique_path, import_config=urdf_config, dest_path=usd_path
     )
-    
+
     # Open USD file and reset articulation root
     stage = Usd.Stage.Open(usd_path)
     for prim in stage.Traverse():
         if prim.HasAPI(UsdPhysics.ArticulationRootAPI):
-            print('[INFO] Removing articulation root for', prim)
+            print("[INFO] Removing articulation root for", prim)
             prim.RemoveAPI(UsdPhysics.ArticulationRootAPI)
     defaultPrim = stage.GetDefaultPrim()
-    print('[INFO] Applying articulation root for', defaultPrim)
+    print("[INFO] Applying articulation root for", defaultPrim)
     UsdPhysics.ArticulationRootAPI.Apply(defaultPrim)
     stage.Save()
+
 
 async def convert(in_file, out_file, load_materials=False):
     ## Copy from standalone_examples/api/omni.kit.asset_converter/asset_usd_converter.py
@@ -250,100 +260,107 @@ async def convert(in_file, out_file, load_materials=False):
             break
     return success
 
+
 def convert_mesh_to_usd(mesh_path, usd_path):
     print(f"Input Mesh file: {mesh_path}")
     print(f"Saving USD file: {usd_path}")
-    status = asyncio.get_event_loop().run_until_complete(
-        convert(mesh_path, usd_path, True)
-    )
+    status = asyncio.get_event_loop().run_until_complete(convert(mesh_path, usd_path, True))
     if not status:
         print(f"ERROR Status is {status}")
     print(f"---Added {usd_path}")
 
-def post_process_usd(usd_path, type, collider_type, maxConvexHulls:Optional[int] = None):
-    print(f'[INFO] Post processing {usd_path} with type {type} and collider type {collider_type}')
+
+def post_process_usd(usd_path, type, collider_type, maxConvexHulls: Optional[int] = None):
+    print(f"[INFO] Post processing {usd_path} with type {type} and collider type {collider_type}")
     stage = Usd.Stage.Open(usd_path)
-    
+
     # Remove all rigid body and collision API
     for prim in stage.Traverse():
         if prim.HasAPI(UsdPhysics.RigidBodyAPI):
             prim.RemoveAPI(UsdPhysics.RigidBodyAPI)
         if prim.HasAPI(UsdPhysics.CollisionAPI):
             prim.RemoveAPI(UsdPhysics.CollisionAPI)
-    
+
     # Apply collision API
-    if type == 'rigid' or type == 'geometry':
+    if type == "rigid" or type == "geometry":
         defaultPrim = stage.GetDefaultPrim()
-        
+
         for prim in stage.Traverse():
             UsdPhysics.CollisionAPI.Apply(prim)
             meshCollisionAPI = UsdPhysics.MeshCollisionAPI.Apply(prim)
-            if collider_type is None or collider_type == 'convex_hull':
+            if collider_type is None or collider_type == "convex_hull":
                 meshCollisionAPI.CreateApproximationAttr().Set("convexHull")
-            elif collider_type == 'convex_decomposition':
+            elif collider_type == "convex_decomposition":
                 meshCollisionAPI.CreateApproximationAttr().Set("convexDecomposition")
-            elif collider_type == 'mesh_simplification':
+            elif collider_type == "mesh_simplification":
                 # This is buggy in Omniverse Isaac Sim 2023.1.1
                 # meshCollisionAPI.CreateApproximationAttr().Set("meshSimplification")
                 raise NotImplementedError("Mesh simplification is buggy in Isaac Sim 2023.1.1.")
-            elif collider_type == 'triangle_mesh':
+            elif collider_type == "triangle_mesh":
                 # This is buggy in Omniverse Isaac Sim 2023.1.1
                 # meshCollisionAPI.CreateApproximationAttr().Set("none")
                 raise NotImplementedError("Triangle mesh is buggy in Isaac Sim 2023.1.1.")
             else:
-                raise ValueError("Unknown collider type.")        
+                raise ValueError("Unknown collider type.")
 
     # Apply rigid body API
-    if type == 'rigid':
+    if type == "rigid":
         defaultPrim = stage.GetDefaultPrim()
         UsdPhysics.RigidBodyAPI.Apply(defaultPrim)
 
     stage.Save()
 
+
 def main():
-    urdf_base_dir = 'data_rlbench/urdf'
-    usd_base_dir = 'data_rlbench/usd'
+    urdf_base_dir = "data_rlbench/urdf"
+    usd_base_dir = "data_rlbench/usd"
     cfg = read_yaml(args.conf)
     objs = args.objs if args.objs else list(cfg.keys())
-    
+
     all_urdf_paths = []
     all_usd_paths = []
     all_object_names = []
-    
+
     for o in objs:
         urdf_obj_dir = pjoin(urdf_base_dir, o)
         usd_obj_dir = mkdir(pjoin(usd_base_dir, o))
-        urdf_names = [name for name in os.listdir(urdf_obj_dir) if 
-                      name.endswith('.stl') or (name.endswith('.urdf') and not name.endswith('_unique.urdf'))]
-        urdf_names = [name for name in urdf_names if name.removesuffix('.urdf').removesuffix('.stl') in cfg[o]['objects']]
-        usd_names = [name.removesuffix('.urdf').removesuffix('.stl') + '.usd' for name in urdf_names]
+        urdf_names = [
+            name
+            for name in os.listdir(urdf_obj_dir)
+            if name.endswith(".stl") or (name.endswith(".urdf") and not name.endswith("_unique.urdf"))
+        ]
+        urdf_names = [
+            name for name in urdf_names if name.removesuffix(".urdf").removesuffix(".stl") in cfg[o]["objects"]
+        ]
+        usd_names = [name.removesuffix(".urdf").removesuffix(".stl") + ".usd" for name in urdf_names]
         urdf_paths = [pjoin(urdf_obj_dir, name) for name in urdf_names]
         usd_paths = [pjoin(usd_obj_dir, name) for name in usd_names]
-        
+
         all_urdf_paths += urdf_paths
         all_usd_paths += usd_paths
         all_object_names += [o] * len(urdf_paths)
-    
+
     for idx, (urdf_path, usd_path, o) in enumerate(zip(all_urdf_paths, all_usd_paths, all_object_names)):
         print("-" * 80)
         print("-" * 80)
         print("idx: ", idx, f"out of {len(all_usd_paths)}")
-        if urdf_path.endswith('.stl'):
+        if urdf_path.endswith(".stl"):
             convert_mesh_to_usd(urdf_path, usd_path)
-        elif urdf_path.endswith('.urdf'):
+        elif urdf_path.endswith(".urdf"):
             convert_urdf_to_usd(urdf_path, usd_path)
         else:
             raise ValueError("Unknown file type.")
-        
+
         name = os.path.splitext(os.path.basename(usd_path))[0]
         try:
-            type = cfg[o]['types'][name]
+            type = cfg[o]["types"][name]
         except:
-            type = 'rigid'
-        collider_type = safe_get(cfg, f'{o}.collider_types.{name}')
+            type = "rigid"
+        collider_type = safe_get(cfg, f"{o}.collider_types.{name}")
         post_process_usd(usd_path, type, collider_type)
         print("-" * 80)
         print("-" * 80)
+
 
 if __name__ == "__main__":
     main()
