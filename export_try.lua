@@ -427,7 +427,7 @@ function sysCall_init()
     --     "wipe_desk.ttm",
     -- }
     ttmFiles = {
-        "close_box.ttm",
+        "get_ice_from_fridge.ttm",
     }
 
     -- Iterate over each TTM file and export URDF
