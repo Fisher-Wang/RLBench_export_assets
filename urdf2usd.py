@@ -11,7 +11,7 @@ import tyro
 @dataclass
 class Args:
     input: str
-    output: str
+    output: str | None = None
     make_instanceable: bool = False
     collision_approximation: Literal["convexHull", "convexDecomposition", "none"] = "convexHull"
     """The method used for approximating collision mesh. Set to "none" to not add a collision mesh to the converted mesh."""
@@ -19,6 +19,8 @@ class Args:
     """The mass (in kg) to assign to the converted asset. If not provided, then no mass is added."""
     headless: bool = False
     """Run with headless could be buggy, see https://github.com/isaac-sim/IsaacLab/issues/1279"""
+    exit_on_finish: bool = True
+    """Exit the IsaacSim app after the conversion is finished."""
 
 
 args = tyro.cli(Args)
@@ -167,19 +169,42 @@ def apply_rigidbody_api(usd_path):
     stage.Save()
 
 
+def count_rigid_api(usd_path):
+    stage = Usd.Stage.Open(usd_path)
+    rigid_api_count = 0
+    for prim in stage.Traverse():
+        if prim.HasAPI(UsdPhysics.RigidBodyAPI):
+            rigid_api_count += 1
+    return rigid_api_count
+
+
+def imply_output_path(input_path: str) -> str:
+    task_name = os.path.dirname(os.path.relpath(input_path, 'data_rlbench/urdf'))
+    obj_name = os.path.basename(input_path).removesuffix('.urdf').removesuffix('.obj')
+    return os.path.expanduser(f'~/cod/RoboVerse/roboverse_data/assets/rlbench/{task_name}/{obj_name}/usd/{obj_name}.usd')
+
+
 def main():
-    usd_path = args.output
+    if args.output is None:
+        args.output = imply_output_path(args.input)
 
     # Main conversion
     if args.input.endswith(".obj"):
-        convert_obj_to_usd(args.input, usd_path)
-        apply_rigidbody_api(usd_path)
+        convert_obj_to_usd(args.input, args.output)
+        apply_rigidbody_api(args.output)
     elif args.input.endswith(".urdf"):
         urdf_unique_path = make_urdf_with_unique_visual_names(args.input)
-        convert_urdf_to_usd(urdf_unique_path, usd_path)
-        if not is_articulation(usd_path):
-            apply_rigidbody_api(usd_path)
-    log.info(f"Saved USD file to {os.path.abspath(usd_path)}")
+        convert_urdf_to_usd(urdf_unique_path, args.output)
+        if not is_articulation(args.output):
+            apply_rigidbody_api(args.output)
+    log.info(f'Rigid body count: {count_rigid_api(args.output)}')
+    log.info(f"Saved USD file to {os.path.abspath(args.output)}")
+
+    os.remove(os.path.join(os.path.dirname(args.output), '.asset_hash'))
+    os.remove(os.path.join(os.path.dirname(args.output), 'config.yaml'))
+
+    if args.exit_on_finish:
+        return
 
     # Determine if there is a GUI to update:
     if not args.headless:
@@ -193,7 +218,7 @@ def main():
         # Simulate scene (if not headless)
         if local_gui or livestream_gui:
             # Open the stage with USD
-            stage_utils.open_stage(usd_path)
+            stage_utils.open_stage(args.output)
             # Reinitialize the simulation
             app = omni.kit.app.get_app_interface()
             # Run simulation
