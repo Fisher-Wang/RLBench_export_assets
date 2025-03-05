@@ -17,7 +17,8 @@ class Args:
     """The method used for approximating collision mesh. Set to "none" to not add a collision mesh to the converted mesh."""
     mass: float | None = None
     """The mass (in kg) to assign to the converted asset. If not provided, then no mass is added."""
-    headless: bool = True
+    headless: bool = False
+    """Run with headless could be buggy, see https://github.com/isaac-sim/IsaacLab/issues/1279"""
 
 
 args = tyro.cli(Args)
@@ -41,12 +42,19 @@ simulation_app = app_launcher.app
 ########################################################
 import contextlib
 import os
+import xml.etree.ElementTree as ET
+from collections import defaultdict
 
 import carb
 import omni.isaac.core.utils.stage as stage_utils
 import omni.kit.app
 from loguru import logger as log
-from omni.isaac.lab.sim.converters import MeshConverter, MeshConverterCfg
+from omni.isaac.lab.sim.converters import (
+    MeshConverter,
+    MeshConverterCfg,
+    UrdfConverter,
+    UrdfConverterCfg,
+)
 from omni.isaac.lab.sim.schemas import schemas_cfg
 from omni.isaac.lab.utils.assets import check_file_path
 from pxr import Usd, UsdPhysics
@@ -94,6 +102,63 @@ def convert_obj_to_usd(obj_path, usd_path):
 
     MeshConverter(mesh_converter_cfg)
 
+def make_visual_names_unique(xml_string: str) -> str:
+    tree = ET.ElementTree(ET.fromstring(xml_string))
+    root = tree.getroot()
+
+    # Find all visual elements with a "name" attribute
+    elements_with_name = root.findall(".//visual")
+
+    # Count the occurrences of each name
+    name_counts = defaultdict(int)
+    for element in elements_with_name:
+        name = element.get("name")
+        name_counts[name] += 1
+
+    # Rename elements with repeated names
+    for element in elements_with_name:
+        name = element.get("name")
+        if name_counts[name] > 1:
+            count = name_counts[name]
+            new_name = f"{name}{count}"
+            element.set("name", new_name)
+            name_counts[name] -= 1
+
+    return ET.tostring(root, encoding="unicode")
+
+def make_urdf_with_unique_visual_names(urdf_path: str) -> str:
+    xml_str = open(urdf_path, "r").read()
+    xml_str = '<?xml version="1.0"?>' + "\n" + make_visual_names_unique(xml_str)
+    urdf_unique_path = urdf_path.replace(".urdf", "_unique.urdf")
+    with open(urdf_unique_path, "w") as f:
+        f.write(xml_str)
+    return urdf_unique_path
+
+def convert_urdf_to_usd(urdf_path, usd_path):
+    log.info(f"Converting {urdf_path}")
+
+    # check valid file path
+    if not os.path.isabs(urdf_path):
+        urdf_path = os.path.abspath(urdf_path)
+
+    urdf_converter_cfg = UrdfConverterCfg(
+        asset_path=urdf_path,
+        usd_dir=os.path.dirname(usd_path),
+        usd_file_name=os.path.basename(usd_path),
+        make_instanceable=args.make_instanceable,
+        force_usd_conversion=True,
+        fix_base=True,
+    )
+    UrdfConverter(urdf_converter_cfg)
+
+def is_articulation(usd_path: str):
+    joint_count = 0
+    stage = Usd.Stage.Open(usd_path)
+    for prim in stage.Traverse():
+        if prim.IsA(UsdPhysics.Joint):
+            joint_count += 1
+    return joint_count > 0
+
 
 def apply_rigidbody_api(usd_path):
     stage = Usd.Stage.Open(usd_path)
@@ -103,12 +168,17 @@ def apply_rigidbody_api(usd_path):
 
 
 def main():
-    obj_path = args.input
     usd_path = args.output
 
     # Main conversion
-    convert_obj_to_usd(obj_path, usd_path)
-    apply_rigidbody_api(usd_path)
+    if args.input.endswith(".obj"):
+        convert_obj_to_usd(args.input, usd_path)
+        apply_rigidbody_api(usd_path)
+    elif args.input.endswith(".urdf"):
+        urdf_unique_path = make_urdf_with_unique_visual_names(args.input)
+        convert_urdf_to_usd(urdf_unique_path, usd_path)
+        if not is_articulation(usd_path):
+            apply_rigidbody_api(usd_path)
     log.info(f"Saved USD file to {os.path.abspath(usd_path)}")
 
     # Determine if there is a GUI to update:

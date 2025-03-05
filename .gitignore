@@ -12,3 +12,9 @@ __pycache__/
 *.usd
 *.obj
 *.ply
+
+_isaac_sim
+
+# isaacsim urdf importer
+.asset_hash
+config.yaml
