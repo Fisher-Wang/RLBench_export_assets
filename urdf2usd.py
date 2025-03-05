@@ -136,6 +136,14 @@ def make_urdf_with_unique_visual_names(urdf_path: str) -> str:
         f.write(xml_str)
     return urdf_unique_path
 
+def make_obj_without_slashes(obj_path: str) -> str:
+    obj_str = open(obj_path, "r").read()
+    obj_str = obj_str.replace("/", "")
+    obj_clean_path = obj_path.replace(".obj", "_clean.obj")
+    with open(obj_clean_path, "w") as f:
+        f.write(obj_str)
+    return obj_clean_path
+
 def convert_urdf_to_usd(urdf_path, usd_path):
     log.info(f"Converting {urdf_path}")
 
@@ -190,7 +198,8 @@ def main():
 
     # Main conversion
     if args.input.endswith(".obj"):
-        convert_obj_to_usd(args.input, args.output)
+        obj_clean_path = make_obj_without_slashes(args.input)
+        convert_obj_to_usd(obj_clean_path, args.output)
         apply_rigidbody_api(args.output)
     elif args.input.endswith(".urdf"):
         urdf_unique_path = make_urdf_with_unique_visual_names(args.input)
