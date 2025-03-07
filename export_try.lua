@@ -357,7 +357,7 @@ function sysCall_init()
         "open_grill.ttm",
         "open_jar.ttm",
         "open_microwave.ttm",
-        "open_oven.ttm",
+        "open_oven_try.ttm",  -- use modified version to export
         "open_washing_machine.ttm",
         "open_window.ttm",
         "open_wine_bottle.ttm",

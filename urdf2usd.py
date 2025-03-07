@@ -187,7 +187,7 @@ def count_rigid_api(usd_path):
 
 
 def imply_output_path(input_path: str) -> str:
-    task_name = os.path.dirname(os.path.relpath(input_path, 'data_rlbench/urdf'))
+    task_name = os.path.dirname(os.path.relpath(input_path, 'data_rlbench/urdf')).removesuffix('_try')
     obj_name = os.path.basename(input_path).removesuffix('.urdf').removesuffix('.obj')
     return os.path.expanduser(f'~/cod/RoboVerse/roboverse_data/assets/rlbench/{task_name}/{obj_name}/usd/{obj_name}.usd')
 
