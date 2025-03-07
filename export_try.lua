@@ -401,7 +401,7 @@ function sysCall_init()
         "stack_chairs.ttm",
         "stack_cups.ttm",
         "stack_wine.ttm",
-        "straighten_rope.ttm",
+        -- "straighten_rope.ttm",  -- spherical joint cannot be exported to URDF
         "sweep_to_dustpan.ttm",
         "take_cup_out_from_cabinet.ttm",
         "take_frame_off_hanger.ttm",
