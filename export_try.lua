@@ -359,7 +359,7 @@ function sysCall_init()
         "open_microwave.ttm",
         "open_oven_try.ttm",  -- use modified version to export
         "open_washing_machine.ttm",
-        "open_window.ttm",
+        "open_window_try.ttm",  -- use modified version to export
         "open_wine_bottle.ttm",
         "phone_on_base.ttm",
         "pick_and_lift.ttm",
