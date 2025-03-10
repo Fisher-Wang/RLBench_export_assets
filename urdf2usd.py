@@ -46,6 +46,8 @@ import contextlib
 import os
 import xml.etree.ElementTree as ET
 from collections import defaultdict
+from glob import glob
+from itertools import chain
 
 import carb
 import numpy as np
@@ -203,20 +205,31 @@ def imply_output_path(input_path: str) -> str:
 def attach_texture_to_mesh(obj_path: str) -> str:
     obj_dir = os.path.dirname(obj_path)
     obj_name = os.path.basename(obj_path).removesuffix('.obj').removesuffix('_clean')
-    cfg_path = f'{obj_dir}/{obj_name}_1.yaml'
-    cfg = yaml.load(open(cfg_path), Loader=yaml.FullLoader)
-    if 'texture_savepath' not in cfg:
-        return obj_path
+
+    cfg_paths = glob(f'{obj_dir}/{obj_name}_*.yaml')
+    coordinates_list = []
+    texture_list = []
+    for cfg_path in cfg_paths:
+        cfg = yaml.load(open(cfg_path), Loader=yaml.FullLoader)
+        if 'texture_savepath' not in cfg:
+            continue
+
+        texture_path = cfg['texture_savepath']
+        log.info(f'Attaching {texture_path} to {obj_name}')
+        coordinates = np.array(cfg['texture_coordinates']).reshape(-1, 2)
+        coordinates[:, 1] = 1 - coordinates[:, 1]  # flip y-axis
+        texture = o3d.io.read_image(texture_path)
+
+        coordinates_list.append(coordinates)
+        texture_list.append(texture)
+
+    ## TODO: Need to reindex the mesh when there are multiple textures
+    mesh = o3d.io.read_triangle_mesh(obj_path)
+    mesh.textures = texture_list
+    mesh.triangle_uvs = o3d.utility.Vector2dVector(np.concatenate(coordinates_list, axis=0))
+    mesh.triangle_material_ids = o3d.utility.IntVector(list(chain(*[[i] * len(coordinates) for i, coordinates in enumerate(coordinates_list)])))
 
     obj_textured_path = f'{obj_dir}/{obj_name}_textured.obj'
-    log.info(f'Attaching texture to {obj_name}')
-    coordinates = np.array(cfg['texture_coordinates']).reshape(-1, 2)
-    coordinates[:, 1] = 1 - coordinates[:, 1]  # flip y-axis
-    texture_path = cfg['texture_savepath']
-    texture = o3d.io.read_image(texture_path)
-    mesh = o3d.io.read_triangle_mesh(obj_path)
-    mesh.textures = [texture]
-    mesh.triangle_uvs = o3d.utility.Vector2dVector(coordinates)
     o3d.io.write_triangle_mesh(obj_textured_path, mesh)
     ms = pymeshlab.MeshSet()
     ms.load_new_mesh(obj_textured_path)
