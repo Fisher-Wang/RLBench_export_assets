@@ -2,7 +2,7 @@
 # python urdf2usd.py --input data_rlbench/urdf/hockey/hockey_stick.urdf
 # python urdf2usd.py --input data_rlbench/urdf/hockey/hockey_ball.obj
 # python urdf2usd.py --input data_rlbench/urdf/beat_the_buzz/wand.urdf
-# python urdf2usd.py --input data_rlbench/urdf/beat_the_buzz/Cuboid.obj
+# python urdf2usd.py --input data_rlbench/urdf/beat_the_buzz/Cuboid.urdf
 # python urdf2usd.py --input data_rlbench/urdf/block_pyramid/block_pyramid_plane.obj
 # python urdf2usd.py --input data_rlbench/urdf/change_channel/tv_remote.urdf
 # python urdf2usd.py --input data_rlbench/urdf/change_channel/tv_frame.obj
@@ -101,8 +101,6 @@
 # python urdf2usd.py --input data_rlbench/urdf/put_bottle_in_fridge_try/bottle_visual.obj
 # python urdf2usd.py --input data_rlbench/urdf/put_money_in_safe_try/dollar_stack.urdf
 # python urdf2usd.py --input data_rlbench/urdf/put_money_in_safe_try/safe_body.urdf
-# python urdf2usd.py --input data_rlbench/urdf/put_plate_in_colored_dish_rack/dish_rack.urdf
-# python urdf2usd.py --input data_rlbench/urdf/put_plate_in_colored_dish_rack/plate_visual.obj
 # python urdf2usd.py --input data_rlbench/urdf/put_plate_in_colored_dish_rack_try/dish_rack.urdf
 # python urdf2usd.py --input data_rlbench/urdf/put_plate_in_colored_dish_rack_try/plate_visual.urdf
 # python urdf2usd.py --input data_rlbench/urdf/put_plate_in_colored_dish_rack_try/plate_stand.urdf

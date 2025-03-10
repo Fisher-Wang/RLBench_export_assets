@@ -48,8 +48,12 @@ import xml.etree.ElementTree as ET
 from collections import defaultdict
 
 import carb
+import numpy as np
 import omni.isaac.core.utils.stage as stage_utils
 import omni.kit.app
+import open3d as o3d
+import pymeshlab
+import yaml
 from loguru import logger as log
 from omni.isaac.lab.sim.converters import (
     MeshConverter,
@@ -61,6 +65,8 @@ from omni.isaac.lab.sim.schemas import schemas_cfg
 from omni.isaac.lab.utils.assets import check_file_path
 from pxr import Usd, UsdPhysics
 from rich.logging import RichHandler
+
+from utils import ShaderFixer
 
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
@@ -185,13 +191,41 @@ def count_rigid_api(usd_path):
             rigid_api_count += 1
     return rigid_api_count
 
-
+########################################################
+## RLBench Specific
+########################################################
 def imply_output_path(input_path: str) -> str:
     task_name = os.path.dirname(os.path.relpath(input_path, 'data_rlbench/urdf')).removesuffix('_try')
     obj_name = os.path.basename(input_path).removesuffix('.urdf').removesuffix('.obj')
     return os.path.expanduser(f'~/cod/RoboVerse/roboverse_data/assets/rlbench/{task_name}/{obj_name}/usd/{obj_name}.usd')
 
 
+def attach_texture_to_mesh(obj_path: str) -> str:
+    obj_dir = os.path.dirname(obj_path)
+    obj_name = os.path.basename(obj_path).removesuffix('.obj').removesuffix('_clean')
+    cfg_path = f'{obj_dir}/{obj_name}_1.yaml'
+    cfg = yaml.load(open(cfg_path), Loader=yaml.FullLoader)
+    if 'texture_savepath' not in cfg:
+        return obj_path
+
+    obj_textured_path = f'{obj_dir}/{obj_name}_textured.obj'
+    log.info(f'Attaching texture to {obj_name}')
+    coordinates = np.array(cfg['texture_coordinates']).reshape(-1, 2)
+    coordinates[:, 1] = 1 - coordinates[:, 1]  # flip y-axis
+    texture_path = cfg['texture_savepath']
+    texture = o3d.io.read_image(texture_path)
+    mesh = o3d.io.read_triangle_mesh(obj_path)
+    mesh.textures = [texture]
+    mesh.triangle_uvs = o3d.utility.Vector2dVector(coordinates)
+    o3d.io.write_triangle_mesh(obj_textured_path, mesh)
+    ms = pymeshlab.MeshSet()
+    ms.load_new_mesh(obj_textured_path)
+    ms.save_current_mesh(obj_textured_path)
+    return obj_textured_path
+
+########################################################
+## Main
+########################################################
 def main():
     if args.output is None:
         args.output = imply_output_path(args.input)
@@ -199,7 +233,9 @@ def main():
     # Main conversion
     if args.input.endswith(".obj"):
         obj_clean_path = make_obj_without_slashes(args.input)
-        convert_obj_to_usd(obj_clean_path, args.output)
+        obj_textured_path = attach_texture_to_mesh(obj_clean_path)
+        convert_obj_to_usd(obj_textured_path, args.output)
+        ShaderFixer(args.output).fix_all()
         apply_rigidbody_api(args.output)
     elif args.input.endswith(".urdf"):
         urdf_unique_path = make_urdf_with_unique_visual_names(args.input)
