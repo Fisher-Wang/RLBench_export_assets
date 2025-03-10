@@ -223,6 +223,9 @@ def attach_texture_to_mesh(obj_path: str) -> str:
         coordinates_list.append(coordinates)
         texture_list.append(texture)
 
+    if len(texture_list) == 0:
+        return obj_path
+
     ## TODO: Need to reindex the mesh when there are multiple textures
     mesh = o3d.io.read_triangle_mesh(obj_path)
     mesh.textures = texture_list
