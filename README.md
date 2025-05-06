@@ -1,4 +1,4 @@
-# Transmission from COLOSSEUM to RoboVerse
+# Convert RLBench assets to URDF/USD
 
 ## Acknowledgements
 
