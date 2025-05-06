@@ -226,7 +226,7 @@ def attach_texture_to_mesh(obj_path: str) -> str:
     if len(texture_list) == 0:
         return obj_path
 
-    ## TODO: Need to reindex the mesh when there are multiple textures
+    ## TODO: Need to concatenate the images when there are multiple textures
     mesh = o3d.io.read_triangle_mesh(obj_path)
     mesh.textures = texture_list
     mesh.triangle_uvs = o3d.utility.Vector2dVector(np.concatenate(coordinates_list, axis=0))
