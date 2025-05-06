@@ -1,5 +1,9 @@
 # Transmission from COLOSSEUM to RoboVerse
 
+## Acknowledgements
+
+The assets in `data_rlbench/ttm` are from [RLBench](https://github.com/stepjam/RLBench), licensed under the [RLBench's license](data_rlbench/ttm/LICENSE).
+
 ## Installation
 
 Change the `simURDF.export` function in `lua/simURDF.lua` to the following:
